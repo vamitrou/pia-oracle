@@ -26,7 +26,7 @@ func exportData() {
 func main() {
 	odb := new(OracleDB)
 	odb.ReadConfig("db_conf.json")
-	fmt.Print(odb.Conf.Host)
+	fmt.Println(odb.Conf.Host)
 	odb.GetData()
 
 	rest := new(Rester)

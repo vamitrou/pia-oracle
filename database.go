@@ -49,13 +49,57 @@ func (odb OracleDB) GetData() {
 
 func testSelect(db *sql.DB) {
 	fmt.Println("test select")
-	rows, err := db.Query("select * from TEMPTABLE")
+	rows, err := db.Query("SELECT GLB_OE_ID, CLM_RK, ABT_DT_ZERO FROM ( select * from V33_GDWHANLT.FRAUD_ABT ) where ROWNUM < 5")
 	check(err)
 	defer rows.Close()
 
+	/*fmt.Println(rows.Columns())
+
 	for rows.Next() {
+		fmt.Println("next")
 		var f1 int
 		rows.Scan(&f1)
 		fmt.Println(f1)
+	}*/
+
+	// Get column names
+	columns, err := rows.Columns()
+	if err != nil {
+		panic(err.Error()) // proper error handling instead of panic in your app
 	}
+
+	// Make a slice for the values
+	values := make([]sql.RawBytes, len(columns))
+
+	// rows.Scan wants '[]interface{}' as an argument, so we must copy the
+	// references into such a slice
+	// See http://code.google.com/p/go-wiki/wiki/InterfaceSlice for details
+	scanArgs := make([]interface{}, len(values))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+
+	// Fetch rows
+	for rows.Next() {
+		// get RawBytes from data
+		err = rows.Scan(scanArgs...)
+		if err != nil {
+			panic(err.Error()) // proper error handling instead of panic in your app
+		}
+
+		// Now do something with the data.
+		// Here we just print each column as a string.
+		var value string
+		for i, col := range values {
+			// Here we can check if the value is nil (NULL value)
+			if col == nil {
+				value = "NULL"
+			} else {
+				value = string(col)
+			}
+			fmt.Println(columns[i], ": ", value)
+		}
+		fmt.Println("-----------------------------------")
+	}
+
 }
