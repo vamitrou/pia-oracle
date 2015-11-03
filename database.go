@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"time"
 
 	_ "github.com/mattn/go-oci8"
 )
@@ -43,24 +44,17 @@ func (odb OracleDB) GetData() {
 	db, err := sql.Open("oci8", dsn)
 	check(err)
 
-	defer db.Close()
-	testSelect(db)
+	//defer db.Close()
+	go testSelect(db)
+	fmt.Println("pass")
 }
 
 func testSelect(db *sql.DB) {
 	fmt.Println("test select")
-	rows, err := db.Query("SELECT GLB_OE_ID, CLM_RK, ABT_DT_ZERO FROM ( select * from V33_GDWHANLT.FRAUD_ABT ) where ROWNUM < 5")
+	//rows, err := db.Query("SELECT * FROM ( select * from V33_GDWHANLT.FRAUD_ABT ) where ROWNUM < 5")
+	rows, err := db.Query("SELECT GLB_OE_ID, CLM_RK, ABT_DT_ZERO FROM ( select * from V33_GDWHANLT.FRAUD_ABT ) where ROWNUM < 5000")
 	check(err)
-	defer rows.Close()
-
-	/*fmt.Println(rows.Columns())
-
-	for rows.Next() {
-		fmt.Println("next")
-		var f1 int
-		rows.Scan(&f1)
-		fmt.Println(f1)
-	}*/
+	// defer rows.Close()
 
 	// Get column names
 	columns, err := rows.Columns()
@@ -70,6 +64,7 @@ func testSelect(db *sql.DB) {
 
 	// Make a slice for the values
 	values := make([]sql.RawBytes, len(columns))
+	//values := make([]string, len(columns))
 
 	// rows.Scan wants '[]interface{}' as an argument, so we must copy the
 	// references into such a slice
@@ -78,18 +73,21 @@ func testSelect(db *sql.DB) {
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}
+	scanArgs[2] = new(time.Time)
+	//scanArgs[15] = new(time.Time)
 
+	defer timeTrack(time.Now(), "get oracle data")
 	// Fetch rows
 	for rows.Next() {
 		// get RawBytes from data
 		err = rows.Scan(scanArgs...)
 		if err != nil {
-			panic(err.Error()) // proper error handling instead of panic in your app
+			check(err)
 		}
 
 		// Now do something with the data.
 		// Here we just print each column as a string.
-		var value string
+		/*var value string
 		for i, col := range values {
 			// Here we can check if the value is nil (NULL value)
 			if col == nil {
@@ -98,8 +96,10 @@ func testSelect(db *sql.DB) {
 				value = string(col)
 			}
 			fmt.Println(columns[i], ": ", value)
-		}
-		fmt.Println("-----------------------------------")
+		} */
+		//fmt.Println(scanArgs[2])
+		//fmt.Println("-----------------------------------")
 	}
-
+	rows.Close()
+	db.Close()
 }
