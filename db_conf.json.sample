@@ -1,0 +1,8 @@
+{
+	"host": "my.host.com",
+	"port": 1521,
+	"username": "warrior",
+	"password": "p4sSword",
+	"service_name": "Service_name",
+	"table": "TBL"
+}
