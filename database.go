@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -50,18 +51,29 @@ func (odb OracleDB) GetData() {
 	check(err)
 
 	defer db.Close()
-	odb.testSelect(db)
-	fmt.Println("pass")
+
+	f, err := os.Open("columns.txt")
+	defer f.Close()
+	check(err)
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+		query := fmt.Sprintf("SELECT %s FROM ( select * from %s.%s) where ROWNUM < 5",
+			scanner.Text(), odb.Conf.Schema, odb.Conf.Table)
+		odb.testSelect(db, query)
+	}
+
 }
 
-func (odb OracleDB) testSelect(db *sql.DB) {
+func (odb OracleDB) testSelect(db *sql.DB, query string) {
 	defer timeTrack(time.Now(), "get oracle data")
 
 	//query := fmt.Sprintf("select * from %s.%s",
-	query := fmt.Sprintf("SELECT * FROM ( select * from %s.%s) where ROWNUM < 20",
-		odb.Conf.Schema, odb.Conf.Table)
-	fmt.Println(query)
+	//query := fmt.Sprintf("SELECT * FROM ( select * from %s.%s) where ROWNUM < 5",
+	//	odb.Conf.Schema, odb.Conf.Table)
+	//fmt.Println(query)
 	rows, err := db.Query(query)
+	// rows, err := db.Query("SELECT * FROM ( select * from V33_GDWHANLT.FRAUD_ABT ) where ROWNUM < 5")
 	check(err)
 	defer rows.Close()
 
@@ -77,14 +89,14 @@ func (odb OracleDB) testSelect(db *sql.DB) {
 		scanArgs[i] = &values[i]
 	}
 
-	data := make([]map[string]interface{}, 0)
+	// data := make([]map[string]interface{}, 0)
 
 	// Fetch rows
 	for rows.Next() {
-		fmt.Println("new row")
+		// fmt.Println("new row")
 		err = rows.Scan(scanArgs...)
 		check(err)
-		fmt.Println(values)
+		//fmt.Println(values)
 		// get RawBytes from data
 		/*	err = rows.Scan(scanArgs...)
 			check(err)
@@ -110,12 +122,12 @@ func (odb OracleDB) testSelect(db *sql.DB) {
 	}
 
 	//fmt.Println(l.Len())
-	defer timeTrack(time.Now(), "marshal and write data")
+	/*defer timeTrack(time.Now(), "marshal and write data")
 	json_bytes, err := json.Marshal(data)
 	check(err)
 	f, err := os.Create("results.txt")
 	defer f.Close()
 	check(err)
 	f.WriteString(string(json_bytes))
-	// fmt.Println(string(json_bytes))
+	// fmt.Println(string(json_bytes))*/
 }
