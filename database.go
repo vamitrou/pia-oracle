@@ -4,7 +4,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/famz/SetLocale"
 	"io/ioutil"
+	"os"
+	//	"strconv"
 	"time"
 
 	_ "github.com/mattn/go-oci8"
@@ -20,6 +23,7 @@ type DBConf struct {
 	Username    string `json:"username"`
 	Password    string `json:"password"`
 	ServiceName string `json:"service_name"`
+	Schema      string `json:"schema"`
 	Table       string `json:"table"`
 }
 
@@ -40,66 +44,78 @@ func (odb OracleDB) getDSN() string {
 }
 
 func (odb OracleDB) GetData() {
+	SetLocale.SetLocale(SetLocale.LC_ALL, "de_DE")
 	dsn := odb.getDSN()
 	db, err := sql.Open("oci8", dsn)
 	check(err)
 
-	//defer db.Close()
-	go testSelect(db)
+	defer db.Close()
+	odb.testSelect(db)
 	fmt.Println("pass")
 }
 
-func testSelect(db *sql.DB) {
-	fmt.Println("test select")
-	//rows, err := db.Query("SELECT * FROM ( select * from V33_GDWHANLT.FRAUD_ABT ) where ROWNUM < 5")
-	rows, err := db.Query("SELECT GLB_OE_ID, CLM_RK, ABT_DT_ZERO FROM ( select * from V33_GDWHANLT.FRAUD_ABT ) where ROWNUM < 5000")
+func (odb OracleDB) testSelect(db *sql.DB) {
+	defer timeTrack(time.Now(), "get oracle data")
+
+	//query := fmt.Sprintf("select * from %s.%s",
+	query := fmt.Sprintf("SELECT * FROM ( select * from %s.%s) where ROWNUM < 20",
+		odb.Conf.Schema, odb.Conf.Table)
+	fmt.Println(query)
+	rows, err := db.Query(query)
 	check(err)
-	// defer rows.Close()
+	defer rows.Close()
 
-	// Get column names
 	columns, err := rows.Columns()
-	if err != nil {
-		panic(err.Error()) // proper error handling instead of panic in your app
-	}
-
-	// Make a slice for the values
-	values := make([]sql.RawBytes, len(columns))
-	//values := make([]string, len(columns))
+	check(err)
 
 	// rows.Scan wants '[]interface{}' as an argument, so we must copy the
 	// references into such a slice
 	// See http://code.google.com/p/go-wiki/wiki/InterfaceSlice for details
+	values := make([]interface{}, len(columns))
 	scanArgs := make([]interface{}, len(values))
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}
-	scanArgs[2] = new(time.Time)
-	//scanArgs[15] = new(time.Time)
 
-	defer timeTrack(time.Now(), "get oracle data")
+	data := make([]map[string]interface{}, 0)
+
 	// Fetch rows
 	for rows.Next() {
-		// get RawBytes from data
+		fmt.Println("new row")
 		err = rows.Scan(scanArgs...)
-		if err != nil {
+		check(err)
+		fmt.Println(values)
+		// get RawBytes from data
+		/*	err = rows.Scan(scanArgs...)
 			check(err)
-		}
 
-		// Now do something with the data.
-		// Here we just print each column as a string.
-		/*var value string
-		for i, col := range values {
-			// Here we can check if the value is nil (NULL value)
-			if col == nil {
-				value = "NULL"
-			} else {
-				value = string(col)
+			var m = make(map[string]interface{})
+			i := 0
+			for _, colName := range columns {
+				strVal, _ := values[i].(string)
+				num, err := strconv.ParseFloat(strVal, 32)
+				if err != nil {
+					m[colName] = values[i]
+				} else {
+					m[colName] = num
+				}
+				i += 1
 			}
-			fmt.Println(columns[i], ": ", value)
-		} */
-		//fmt.Println(scanArgs[2])
-		//fmt.Println("-----------------------------------")
+
+			data = append(data, m) */
 	}
-	rows.Close()
-	db.Close()
+
+	if rows.Err() != nil {
+		fmt.Println(rows.Err())
+	}
+
+	//fmt.Println(l.Len())
+	defer timeTrack(time.Now(), "marshal and write data")
+	json_bytes, err := json.Marshal(data)
+	check(err)
+	f, err := os.Create("results.txt")
+	defer f.Close()
+	check(err)
+	f.WriteString(string(json_bytes))
+	// fmt.Println(string(json_bytes))
 }
