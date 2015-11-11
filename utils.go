@@ -6,8 +6,16 @@ import (
 )
 
 func check(e error) {
+	check_with_abort(e, true)
+}
+
+func check_with_abort(e error, abort bool) {
 	if e != nil {
-		panic(e)
+		if abort {
+			panic(e)
+		} else {
+			fmt.Println(e)
+		}
 	}
 }
 

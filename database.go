@@ -1,14 +1,14 @@
 package main
 
 import (
-	"bufio"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/famz/SetLocale"
+	"github.com/golang/protobuf/proto"
+	"github.com/vamitrou/pia-oracle/protobuf"
 	"io/ioutil"
 	"os"
-	//	"strconv"
 	"time"
 
 	_ "github.com/mattn/go-oci8"
@@ -52,82 +52,74 @@ func (odb OracleDB) GetData() {
 
 	defer db.Close()
 
-	f, err := os.Open("columns.txt")
-	defer f.Close()
-	check(err)
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		fmt.Println(scanner.Text())
-		query := fmt.Sprintf("SELECT %s FROM ( select * from %s.%s) where ROWNUM < 5",
-			scanner.Text(), odb.Conf.Schema, odb.Conf.Table)
-		odb.testSelect(db, query)
-	}
-
+	query := `select * from %[1]s.%[2]s where glb_oe_id=4043 and (
+	       (invstgt_strt_dt is not NULL) or (clm_rgstr_dttm >= (select min(invstgt_strt_dt)
+	             from %[1]s.%[2]s where invstgt_strt_dt is not NULL)) ) and
+		              (load_date in (select max(load_date) as load_date from %[1]s.%[2]s))`
+	query = fmt.Sprintf(query, odb.Conf.Schema, odb.Conf.Table)
+	odb.SelectDBData(db, query)
 }
 
-func (odb OracleDB) testSelect(db *sql.DB, query string) {
+func (odb OracleDB) SelectDBData(db *sql.DB, query string) {
 	defer timeTrack(time.Now(), "get oracle data")
 
-	//query := fmt.Sprintf("select * from %s.%s",
-	//query := fmt.Sprintf("SELECT * FROM ( select * from %s.%s) where ROWNUM < 5",
-	//	odb.Conf.Schema, odb.Conf.Table)
-	//fmt.Println(query)
 	rows, err := db.Query(query)
-	// rows, err := db.Query("SELECT * FROM ( select * from V33_GDWHANLT.FRAUD_ABT ) where ROWNUM < 5")
 	check(err)
 	defer rows.Close()
 
 	columns, err := rows.Columns()
 	check(err)
 
-	// rows.Scan wants '[]interface{}' as an argument, so we must copy the
-	// references into such a slice
-	// See http://code.google.com/p/go-wiki/wiki/InterfaceSlice for details
 	values := make([]interface{}, len(columns))
 	scanArgs := make([]interface{}, len(values))
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}
 
-	// data := make([]map[string]interface{}, 0)
+	f, err := os.Create("data/results.txt.0")
+	check(err)
 
-	// Fetch rows
+	c := 0
+	claims := new(protoclaim.ProtoListClaim)
+
 	for rows.Next() {
-		// fmt.Println("new row")
+		c += 1
 		err = rows.Scan(scanArgs...)
 		check(err)
-		//fmt.Println(values)
-		// get RawBytes from data
-		/*	err = rows.Scan(scanArgs...)
+
+		var m = make(map[string]interface{})
+		for i, colName := range columns {
+			m[colName] = values[i]
+		}
+
+		claim := ClaimForMap(m)
+		claims.Claims = append(claims.Claims, claim)
+
+		if c%3000 == 0 {
+			proto_bytes, err := proto.Marshal(claims)
 			check(err)
+			f.Write(proto_bytes)
+			f.Sync()
+			f.Close()
 
-			var m = make(map[string]interface{})
-			i := 0
-			for _, colName := range columns {
-				strVal, _ := values[i].(string)
-				num, err := strconv.ParseFloat(strVal, 32)
-				if err != nil {
-					m[colName] = values[i]
-				} else {
-					m[colName] = num
-				}
-				i += 1
-			}
-
-			data = append(data, m) */
+			f, err = os.Create(fmt.Sprintf("data/results.txt.%d", c))
+			check(err)
+			claims = new(protoclaim.ProtoListClaim)
+		}
 	}
 
 	if rows.Err() != nil {
 		fmt.Println(rows.Err())
 	}
 
-	//fmt.Println(l.Len())
-	/*defer timeTrack(time.Now(), "marshal and write data")
-	json_bytes, err := json.Marshal(data)
+	proto_bytes, err := proto.Marshal(claims)
 	check(err)
-	f, err := os.Create("results.txt")
-	defer f.Close()
+
+	f, err = os.Create(fmt.Sprintf("data/results.txt.%d", c))
 	check(err)
-	f.WriteString(string(json_bytes))
-	// fmt.Println(string(json_bytes))*/
+	f.Write(proto_bytes)
+	f.Sync()
+	f.Close()
+
+	fmt.Println(fmt.Sprintf("total count: %d", c))
 }

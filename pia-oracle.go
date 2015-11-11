@@ -9,6 +9,7 @@ import (
 
 func trigger(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "Triggered..")
+	fmt.Println(time.Now())
 	go importData()
 }
 
@@ -31,6 +32,7 @@ func exportData() {
 }
 
 func main() {
+	go func() { fmt.Println("yourself") }()
 	fmt.Println("Server started")
 
 	rest := new(Rester)
