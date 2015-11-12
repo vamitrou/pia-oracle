@@ -14,13 +14,12 @@ import (
 )
 
 func getDSN(conf config.DatabaseConf) string {
-	fmt.Println(fmt.Sprintf("%s/%s@%s:%d/%s",
+	return fmt.Sprintf("%s/%s@%s:%d/%s",
 		conf.Username,
 		conf.Password,
 		conf.Host,
 		conf.Port,
-		conf.ServiceName))
-	return ""
+		conf.ServiceName)
 }
 
 func GetData(conf config.DatabaseConf) {
