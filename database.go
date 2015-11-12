@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/famz/SetLocale"
 	"github.com/golang/protobuf/proto"
-	"github.com/vamitrou/pia-oracle/config"
 	"github.com/vamitrou/pia-oracle/protobuf"
 	"os"
 	"time"
@@ -13,29 +12,23 @@ import (
 	_ "github.com/vamitrou/go-oci8"
 )
 
-func getDSN(conf config.DatabaseConf) string {
+func getDSN() string {
 	return fmt.Sprintf("%s/%s@%s:%d/%s",
-		conf.Username,
-		conf.Password,
-		conf.Host,
-		conf.Port,
-		conf.ServiceName)
+		conf.Database.Username,
+		conf.Database.Password,
+		conf.Database.Host,
+		conf.Database.Port,
+		conf.Database.ServiceName)
 }
 
-func GetData(conf config.DatabaseConf) {
+func GetData() {
 	SetLocale.SetLocale(SetLocale.LC_ALL, "de_DE")
-	dsn := getDSN(conf)
+	dsn := getDSN()
 	db, err := sql.Open("oci8", dsn)
 	check(err)
 
 	defer db.Close()
-
-	query := `select * from (select * from %[1]s.%[2]s where glb_oe_id=4043 and (
-	       (invstgt_strt_dt is not NULL) or (clm_rgstr_dttm >= (select min(invstgt_strt_dt)
-	             from %[1]s.%[2]s where invstgt_strt_dt is not NULL)) ) and
-		              (load_date in (select max(load_date) as load_date from %[1]s.%[2]s))) where rownum<2`
-	query = fmt.Sprintf(query, conf.Schema, conf.Table)
-	SelectDBData(db, query)
+	SelectDBData(db, conf.Database.Query)
 }
 
 func SelectDBData(db *sql.DB, query string) {

@@ -23,7 +23,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 
 func importData() {
 	fmt.Printf("importing data\n")
-	GetData(conf.Database)
+	GetData()
 }
 
 func exportData() {
@@ -35,7 +35,6 @@ func main() {
 	fmt.Println("Server started")
 
 	conf = config.GetConfig()
-	fmt.Println(conf)
 
 	rest := new(Rester)
 	rest.ReadConfig("conf/rest_conf.json")
