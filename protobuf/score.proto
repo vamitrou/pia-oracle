@@ -1,0 +1,15 @@
+package protoclaim;
+
+	message ProtoListScore {
+	    repeated ProtoScore Scores = 1;
+
+	    message ProtoScore {
+
+			optional int64 GLB_OE_ID = 1;
+			optional string CLM_BUS_ID = 2;
+			optional double SCORE = 3;
+			optional string MODEL = 4;
+			optional int64 CREATE_DT = 5;
+			optional int64 CREATE_DT_TS = 6;
+		}
+	}
