@@ -2,65 +2,44 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"github.com/famz/SetLocale"
 	"github.com/golang/protobuf/proto"
+	"github.com/vamitrou/pia-oracle/config"
 	"github.com/vamitrou/pia-oracle/protobuf"
-	"io/ioutil"
 	"os"
 	"time"
 
-	_ "github.com/mattn/go-oci8"
+	_ "github.com/vamitrou/go-oci8"
 )
 
-type OracleDB struct {
-	Conf DBConf
+func getDSN(conf config.DatabaseConf) string {
+	fmt.Println(fmt.Sprintf("%s/%s@%s:%d/%s",
+		conf.Username,
+		conf.Password,
+		conf.Host,
+		conf.Port,
+		conf.ServiceName))
+	return ""
 }
 
-type DBConf struct {
-	Host        string `json:"host"`
-	Port        int    `json:"port"`
-	Username    string `json:"username"`
-	Password    string `json:"password"`
-	ServiceName string `json:"service_name"`
-	Schema      string `json:"schema"`
-	Table       string `json:"table"`
-}
-
-func (odb *OracleDB) ReadConfig(configPath string) {
-	dat, err := ioutil.ReadFile(configPath)
-	check(err)
-	err = json.Unmarshal(dat, &odb.Conf)
-	check(err)
-}
-
-func (odb OracleDB) getDSN() string {
-	return fmt.Sprintf("%s/%s@%s:%d/%s",
-		odb.Conf.Username,
-		odb.Conf.Password,
-		odb.Conf.Host,
-		odb.Conf.Port,
-		odb.Conf.ServiceName)
-}
-
-func (odb OracleDB) GetData() {
+func GetData(conf config.DatabaseConf) {
 	SetLocale.SetLocale(SetLocale.LC_ALL, "de_DE")
-	dsn := odb.getDSN()
+	dsn := getDSN(conf)
 	db, err := sql.Open("oci8", dsn)
 	check(err)
 
 	defer db.Close()
 
-	query := `select * from %[1]s.%[2]s where glb_oe_id=4043 and (
+	query := `select * from (select * from %[1]s.%[2]s where glb_oe_id=4043 and (
 	       (invstgt_strt_dt is not NULL) or (clm_rgstr_dttm >= (select min(invstgt_strt_dt)
 	             from %[1]s.%[2]s where invstgt_strt_dt is not NULL)) ) and
-		              (load_date in (select max(load_date) as load_date from %[1]s.%[2]s))`
-	query = fmt.Sprintf(query, odb.Conf.Schema, odb.Conf.Table)
-	odb.SelectDBData(db, query)
+		              (load_date in (select max(load_date) as load_date from %[1]s.%[2]s))) where rownum<2`
+	query = fmt.Sprintf(query, conf.Schema, conf.Table)
+	SelectDBData(db, query)
 }
 
-func (odb OracleDB) SelectDBData(db *sql.DB, query string) {
+func SelectDBData(db *sql.DB, query string) {
 	defer timeTrack(time.Now(), "get oracle data")
 
 	rows, err := db.Query(query)

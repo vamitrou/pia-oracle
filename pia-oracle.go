@@ -2,10 +2,13 @@ package main
 
 import (
 	"fmt"
+	"github.com/vamitrou/pia-oracle/config"
 	"io"
 	"net/http"
 	"time"
 )
+
+var conf *config.PiaConf = nil
 
 func trigger(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "Triggered..")
@@ -20,10 +23,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 
 func importData() {
 	fmt.Printf("importing data\n")
-	odb := new(OracleDB)
-	odb.ReadConfig("conf/db_conf.json")
-	fmt.Println(odb.Conf.Host)
-	odb.GetData()
+	GetData(conf.Database)
 }
 
 func exportData() {
@@ -32,13 +32,15 @@ func exportData() {
 }
 
 func main() {
-	go func() { fmt.Println("yourself") }()
 	fmt.Println("Server started")
+
+	conf = config.GetConfig()
+	fmt.Println(conf)
 
 	rest := new(Rester)
 	rest.ReadConfig("conf/rest_conf.json")
 
 	http.HandleFunc("/trigger", trigger)
 	http.HandleFunc("/callback", callback)
-	http.ListenAndServe(":8001", nil)
+	http.ListenAndServe(fmt.Sprintf("%s:%d", conf.Local.Listen, conf.Local.Port), nil)
 }

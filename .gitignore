@@ -1,3 +1,4 @@
 *.json
-pia-oracle
+*.toml
 .*.sw*
+pia-oracle

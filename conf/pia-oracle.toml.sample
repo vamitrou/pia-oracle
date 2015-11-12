@@ -1,0 +1,29 @@
+# PIA-ORACLE TOML configuration document.
+
+
+
+[local]
+
+listen = "127.0.0.1"
+port = 8001
+
+
+
+[database]
+
+host = ""
+port = 1521
+username = ""
+password = ""
+service_name = ""
+schema = ""
+table = ""
+query = """
+
+"""
+
+
+
+[http]
+
+prediction_endpoint = "http://localhost:8001/callback"
