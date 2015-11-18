@@ -24,8 +24,11 @@ type DatabaseConf struct {
 	Password    string
 	ServiceName string `toml:"service_name"`
 	Schema      string
+	SchemeOut   string `"toml:"schema_out"`
 	Table       string
+	TableOut    string `toml:"table_out"`
 	Query       string
+	QueryOut    string `toml:"query_out"`
 }
 
 type RestConf struct {

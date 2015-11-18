@@ -3,38 +3,23 @@ package main
 import (
 	"bytes"
 	"container/list"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 )
 
-type Rester struct {
-	Conf RestConf
-}
-
-type RestConf struct {
-	PredictEndpoint string `json:"predict_endpoint"`
-}
-
-func (r *Rester) ReadConfig(configPath string) {
-	dat, err := ioutil.ReadFile(configPath)
-	check(err)
-	err = json.Unmarshal(dat, &r.Conf)
-	check(err)
-}
-
-func (r Rester) BatchData(l list.List) {
+func BatchData(l list.List) {
 	for e := l.Front(); e != nil; e = e.Next() {
 		// do something with e.Value
 	}
 }
 
-func (r Rester) Post(data []byte) {
-	var jsonStr = []byte(`{"test": "test"}`)
-	req, err := http.NewRequest("POST", r.Conf.PredictEndpoint, bytes.NewBuffer(jsonStr))
+func Post(url string, data []byte) {
+	//var jsonStr = []byte(`{"test": "test"}`)
+	//req, err := http.NewRequest("POST", r.Conf.PredictEndpoint, bytes.NewBuffer(jsonStr))
+	req, err := http.NewRequest("POST", url, bytes.NewReader(data))
 	check(err)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/protobuf")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

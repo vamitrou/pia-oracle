@@ -1,50 +1,15 @@
 package main
 
 import (
-	"fmt"
+	"database/sql"
 	"github.com/golang/protobuf/proto"
 	"github.com/vamitrou/pia-oracle/protobuf"
-	"reflect"
-	"time"
 )
 
-func AssertFloat(value interface{}) float64 {
-	if value == nil {
-		return 0
-	}
-	if v, ok := value.(float64); ok {
-		return v
-	} else {
-		fmt.Println("++++")
-		fmt.Println(reflect.TypeOf(value))
-		fmt.Println("++++")
-		panic("AssertFloat: not a float")
-	}
-}
-
-func AssertString(value interface{}) string {
-	if value == nil {
-		return ""
-	}
-	if v, ok := value.(string); ok {
-		return v
-	} else {
-		fmt.Println("++++")
-		fmt.Println(reflect.TypeOf(value))
-		fmt.Println("++++")
-		panic("AssertString: not a string")
-	}
-}
-
-func AssertTime(value interface{}) int64 {
-	if value == nil {
-		return 0
-	}
-	if v, ok := value.(time.Time); ok {
-		return v.Unix()
-	} else {
-		panic("AssertTime: not a time.Time")
-	}
+func ExecuteInsert(stmt *sql.Stmt, score *protoclaim.ProtoListScore_ProtoScore) {
+	_, err := stmt.Exec(score.GetGLB_OE_ID(), score.GetCLM_BUS_ID(), score.GetSCORE(),
+		score.GetMODEL(), score.GetCREATE_DT(), score.GetCREATE_DT_TS())
+	check(err)
 }
 
 func ClaimForMap(cmap map[string]interface{}) *protoclaim.ProtoListClaim_ProtoClaim {

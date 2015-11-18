@@ -1,4 +1,5 @@
 *.json
 *.toml
 .*.sw*
+*.pyc
 pia-oracle
