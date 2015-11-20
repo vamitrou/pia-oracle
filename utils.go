@@ -3,6 +3,8 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"github.com/linkedin/goavro"
+	"io/ioutil"
 	"reflect"
 	"time"
 
@@ -75,4 +77,33 @@ func AssertTime(value interface{}) int64 {
 	} else {
 		panic("AssertTime: not a time.Time")
 	}
+}
+
+func LoadAvroSchema(outerFile string, innerFile string) (goavro.RecordSetter, goavro.RecordSetter, goavro.Codec) {
+	dat, err := ioutil.ReadFile(innerFile)
+	check(err)
+	innerSchemaStr := string(dat)
+
+	dat2, err := ioutil.ReadFile(outerFile)
+	check(err)
+	outerSchemaStr := fmt.Sprintf(string(dat2), innerSchemaStr)
+
+	outerSchema := goavro.RecordSchema(outerSchemaStr)
+	innerSchema := goavro.RecordSchema(innerSchemaStr)
+	codec, err := goavro.NewCodec(outerSchemaStr)
+	check(err)
+	return outerSchema, innerSchema, codec
+}
+
+func GetAvroFields(record *goavro.Record, object string) []string {
+	schema, _ := record.GetFieldSchema(object)
+	items := schema.(map[string]interface{})["items"]
+	fields := items.(map[string]interface{})["fields"].([]interface{})
+	ret_fields := make([]string, len(fields))
+	for _, field := range fields {
+		f := field.(map[string]interface{})["name"].(string)
+		fmt.Println(f)
+		ret_fields = append(ret_fields, f)
+	}
+	return ret_fields
 }

@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"github.com/famz/SetLocale"
-	"github.com/golang/protobuf/proto"
+	"io/ioutil"
+	//"github.com/golang/protobuf/proto"
+	//"os"
+	"github.com/linkedin/goavro"
 	"github.com/vamitrou/pia-oracle/protobuf"
-	//	"os"
 	"time"
 
 	_ "github.com/vamitrou/go-oci8"
@@ -65,27 +68,38 @@ func SelectDBData(db *sql.DB, query string) {
 	}
 
 	c := 0
-	claims := new(protoclaim.ProtoListClaim)
+	//claims := new(protoclaim.ProtoListClaim)
+	var claims []interface{}
+	outerSchema, innerSchema, codec := LoadAvroSchema("conf/claims.json", "conf/claim.json")
 
 	for rows.Next() {
 		c += 1
 		err = rows.Scan(scanArgs...)
 		check(err)
 
-		var m = make(map[string]interface{})
+		claim, err := goavro.NewRecord(innerSchema)
+		check(err)
 		for i, colName := range columns {
-			m[colName] = values[i]
+			if val, ok := values[i].(time.Time); ok {
+				claim.Set(colName, int32(val.Unix()))
+			} else if val, ok := values[i].(float64); ok {
+				claim.Set(colName, float32(val))
+			} else {
+				claim.Set(colName, values[i])
+			}
 		}
 
-		claim := ClaimForMap(m)
-		claims.Claims = append(claims.Claims, claim)
+		claims = append(claims, claim)
 
 		if c%3000 == 0 {
-			proto_bytes, err := proto.Marshal(claims)
-			check(err)
-			go Post(conf.Rest.PredictionEndpoint, proto_bytes)
 
-			claims = new(protoclaim.ProtoListClaim)
+			claims_avro, err := goavro.NewRecord(outerSchema)
+			check(err)
+			claims_avro.Set("claims", claims)
+			buf := new(bytes.Buffer)
+			err = codec.Encode(buf, claims_avro)
+			go Post(conf.Rest.PredictionEndpoint, buf.Bytes())
+			claims = make([]interface{}, 0)
 		}
 	}
 
@@ -93,11 +107,15 @@ func SelectDBData(db *sql.DB, query string) {
 		fmt.Println(rows.Err())
 	}
 
-	proto_bytes, err := proto.Marshal(claims)
+	claims_avro, err := goavro.NewRecord(outerSchema)
+	check(err)
+	claims_avro.Set("claims", claims)
+
+	buf := new(bytes.Buffer)
+	err = codec.Encode(buf, claims_avro)
 	check(err)
 
-	fmt.Println(len(claims.Claims))
-	go Post(conf.Rest.PredictionEndpoint, proto_bytes)
+	go Post(conf.Rest.PredictionEndpoint, buf.Bytes())
 	fmt.Println(fmt.Sprintf("total count: %d", c))
 	/*score_proto := &protoclaim.ProtoListScore{}
 	for i := 0; i < 10; i++ {
