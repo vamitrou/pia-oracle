@@ -13,8 +13,9 @@ type PiaConf struct {
 }
 
 type LocalConf struct {
-	Listen string
-	Port   int32
+	Listen   string
+	Port     int32
+	Hostname string
 }
 
 type DatabaseConf struct {
@@ -29,10 +30,12 @@ type DatabaseConf struct {
 	TableOut    string `toml:"table_out"`
 	Query       string
 	QueryOut    string `toml:"query_out"`
+	QueryOutImp string `toml:"query_out_imp"`
 }
 
 type RestConf struct {
 	PredictionEndpoint string `toml:"prediction_endpoint"`
+	AppHeader          string `toml:"application_header"`
 }
 
 func (c *PiaConf) Load(path string) {

@@ -15,14 +15,16 @@ func check(e error) {
 	check_with_abort(e, true)
 }
 
-func check_with_abort(e error, abort bool) {
+func check_with_abort(e error, abort bool) bool {
 	if e != nil {
 		if abort {
 			panic(e)
 		} else {
 			fmt.Println(e)
+			return true
 		}
 	}
+	return false
 }
 
 func timeTrack(start time.Time, name string) {

@@ -3,13 +3,13 @@ package main
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/famz/SetLocale"
-	"io/ioutil"
-	//"github.com/golang/protobuf/proto"
-	//"os"
 	"github.com/linkedin/goavro"
-	"github.com/vamitrou/pia-oracle/protobuf"
+	//"github.com/vamitrou/pia-oracle/protobuf"
+	"io/ioutil"
+	//"io/ioutil"
 	"time"
 
 	_ "github.com/vamitrou/go-oci8"
@@ -34,7 +34,8 @@ func GetData() {
 	SelectDBData(db, conf.Database.Query)
 }
 
-func PushData(scores *protoclaim.ProtoListScore) {
+//func PushData(scores *protoclaim.ProtoListScore) {
+func PushScores(scores []interface{}) {
 	SetLocale.SetLocale(SetLocale.LC_ALL, "de_DE")
 	dsn := getDSN()
 	db, err := sql.Open("oci8", dsn)
@@ -44,11 +45,47 @@ func PushData(scores *protoclaim.ProtoListScore) {
 	tx, err := db.Begin()
 	check(err)
 	stmt := PrepareStatement(tx, conf.Database.QueryOut)
-	for _, score := range scores.Scores {
+	/*for _, score := range scores.Scores {
 		ExecuteInsert(stmt, score)
+	}*/
+	fails_count := 0
+	for _, score := range scores {
+		if s, ok := score.(map[string]interface{}); ok {
+			err = ExecuteScoreInsert(stmt, s)
+			if err != nil {
+				fails_count += 1
+			}
+		} else {
+			fmt.Println("not valid score")
+		}
 	}
 	tx.Commit()
+	fmt.Println("Score Failure count:", fails_count)
+}
 
+func PushVarIMP(var_imps []interface{}) {
+	SetLocale.SetLocale(SetLocale.LC_ALL, "de_DE")
+	dsn := getDSN()
+	db, err := sql.Open("oci8", dsn)
+	check(err)
+	defer db.Close()
+
+	tx, err := db.Begin()
+	check(err)
+	stmt := PrepareStatement(tx, conf.Database.QueryOutImp)
+	fails_count := 0
+	for _, var_imp := range var_imps {
+		if s, ok := var_imp.(map[string]interface{}); ok {
+			err = ExecuteImpInsert(stmt, s)
+			if err != nil {
+				fails_count += 1
+			}
+		} else {
+			fmt.Println("not valid var_imp")
+		}
+	}
+	tx.Commit()
+	fmt.Println("IMP Failure count:", fails_count)
 }
 
 func SelectDBData(db *sql.DB, query string) {
@@ -68,7 +105,6 @@ func SelectDBData(db *sql.DB, query string) {
 	}
 
 	c := 0
-	//claims := new(protoclaim.ProtoListClaim)
 	var claims []interface{}
 	outerSchema, innerSchema, codec := LoadAvroSchema("conf/claims.json", "conf/claim.json")
 
@@ -77,18 +113,22 @@ func SelectDBData(db *sql.DB, query string) {
 		err = rows.Scan(scanArgs...)
 		check(err)
 
+		m := make(map[string]interface{})
 		claim, err := goavro.NewRecord(innerSchema)
 		check(err)
 		for i, colName := range columns {
 			if val, ok := values[i].(time.Time); ok {
-				claim.Set(colName, int32(val.Unix()))
-			} else if val, ok := values[i].(float64); ok {
-				claim.Set(colName, float32(val))
+				claim.Set(colName, val.Unix())
+				m[colName] = val.Unix()
 			} else {
 				claim.Set(colName, values[i])
+				m[colName] = values[i]
 			}
 		}
 
+		j, _ := json.Marshal(m)
+		//fmt.Println(string(j))
+		ioutil.WriteFile("sample.json", j, 0644)
 		claims = append(claims, claim)
 
 		if c%3000 == 0 {
@@ -98,7 +138,7 @@ func SelectDBData(db *sql.DB, query string) {
 			claims_avro.Set("claims", claims)
 			buf := new(bytes.Buffer)
 			err = codec.Encode(buf, claims_avro)
-			go Post(conf.Rest.PredictionEndpoint, buf.Bytes())
+			go Post(conf.Rest.PredictionEndpoint, buf.Bytes(), conf.Rest.AppHeader)
 			claims = make([]interface{}, 0)
 		}
 	}
@@ -115,7 +155,14 @@ func SelectDBData(db *sql.DB, query string) {
 	err = codec.Encode(buf, claims_avro)
 	check(err)
 
-	go Post(conf.Rest.PredictionEndpoint, buf.Bytes())
+	//ioutil.WriteFile("avro_data/results.last", buf.Bytes(), 0644)
+
+	/*	actual := buf.Bytes()
+		dec, err := codec.Decode(bytes.NewReader(actual))
+		check(err)
+		fmt.Println(dec) */
+
+	go Post(conf.Rest.PredictionEndpoint, buf.Bytes(), conf.Rest.AppHeader)
 	fmt.Println(fmt.Sprintf("total count: %d", c))
 	/*score_proto := &protoclaim.ProtoListScore{}
 	for i := 0; i < 10; i++ {

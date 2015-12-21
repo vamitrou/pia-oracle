@@ -14,21 +14,29 @@ func BatchData(l list.List) {
 	}
 }
 
-func Post(url string, data []byte) {
+func Post(url string, data []byte, appHeader string) {
 	//var jsonStr = []byte(`{"test": "test"}`)
 	//req, err := http.NewRequest("POST", r.Conf.PredictEndpoint, bytes.NewBuffer(jsonStr))
+	url = fmt.Sprintf("%s?callback=http://%s:%d/callback", url, conf.Local.Hostname, conf.Local.Port)
 	req, err := http.NewRequest("POST", url, bytes.NewReader(data))
-	check(err)
-	req.Header.Set("Content-Type", "application/protobuf")
+	if check_with_abort(err, false) {
+		return
+	}
+	req.Header.Set("Content-Type", "avro/binary")
+	req.Header.Set("Application", appHeader)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	check(err)
+	if check_with_abort(err, false) {
+		return
+	}
 
 	defer resp.Body.Close()
 	fmt.Println("response status:", resp.Status)
 	fmt.Println("response headers:", resp.Header)
 	body, err := ioutil.ReadAll(resp.Body)
-	check(err)
+	if check_with_abort(err, false) {
+		return
+	}
 	fmt.Println("response body:", string(body))
 }

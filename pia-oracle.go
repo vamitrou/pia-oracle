@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	"github.com/vamitrou/pia-oracle/config"
-	"github.com/vamitrou/pia-oracle/protobuf"
-	"io"
 	"io/ioutil"
+	//"github.com/golang/protobuf/proto"
+	"github.com/vamitrou/pia-oracle/config"
+	//"github.com/vamitrou/pia-oracle/protobuf"
+	"encoding/json"
+	"io"
 	"net/http"
 	"time"
 )
@@ -24,7 +25,7 @@ func trigger(w http.ResponseWriter, r *http.Request) {
 }
 
 func callback(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
+	if r.Method != "POST" {
 		io.WriteString(w, "Method not allowed.")
 		return
 	}
@@ -32,10 +33,11 @@ func callback(w http.ResponseWriter, r *http.Request) {
 
 	body, err := ioutil.ReadAll(r.Body)
 	check(err)
-	//fmt.Println(body)
+	//fmt.Println(string(body))
 	fmt.Println(len(body))
 
 	go exportData(body)
+	fmt.Println("-> callback")
 }
 
 func predict(w http.ResponseWriter, r *http.Request) {
@@ -49,11 +51,27 @@ func importData() {
 
 func exportData(data []byte) {
 	fmt.Printf("exporting data\n")
-	protoscore := &protoclaim.ProtoListScore{}
-	err := proto.Unmarshal(data, protoscore)
+	//protoscore := &protoclaim.ProtoListScore{}
+	//err := proto.Unmarshal(data, protoscore)
+	//check(err)
+	//PushData(protoscore)
+
+	var j map[string]interface{}
+	err := json.Unmarshal(data, &j)
 	check(err)
-	PushData(protoscore)
+	if scores, ok := j["Score"].([]interface{}); ok {
+		PushScores(scores)
+	} else {
+		fmt.Println("Not valid scores array")
+	}
+	if var_imps, ok := j["var_imp"].([]interface{}); ok {
+		PushVarIMP(var_imps)
+	} else {
+		fmt.Println("Not valid var_imps array")
+	}
 	//fmt.Println(protoscore)
+	fmt.Println("done")
+	fmt.Println(time.Now())
 }
 
 func main() {

@@ -2,11 +2,59 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/vamitrou/pia-oracle/protobuf"
 )
 
-func ExecuteInsert(stmt *sql.Stmt, score *protoclaim.ProtoListScore_ProtoScore) {
+func ExecuteScoreInsert(stmt *sql.Stmt, score map[string]interface{}) error {
+	if _, ok := score["SCORE"].(string); ok {
+		_, err := stmt.Exec(score["GLB_OE_ID"].(float64),
+			score["CLM_BUS_ID"].(string),
+			nil,
+			nil,
+			score["CREATE_DT_TS"].(float64))
+		return err
+	}
+	_, err := stmt.Exec(score["GLB_OE_ID"].(float64),
+		score["CLM_BUS_ID"].(string),
+		score["SCORE"].(float64),
+		score["MODEL"].(string),
+		score["CREATE_DT_TS"].(float64))
+	return err
+}
+
+func ExecuteImpInsert(stmt *sql.Stmt, var_imp map[string]interface{}) error {
+	fmt.Println(var_imp)
+	var err error
+	if _, ok := var_imp["pred"].(float64); ok {
+		_, err = stmt.Exec(var_imp["GLB_OE_ID"].(float64),
+			var_imp["CLM_BUS_ID"].(string),
+			var_imp["MODEL"].(string),
+			var_imp["MODEL_DESC"].(string),
+			var_imp["VAR"].(string),
+			var_imp["VALUE"].(string),
+			var_imp["WEIGHT"].(string),
+			var_imp["RANK"].(float64),
+			var_imp["pred"].(float64),
+			var_imp["CREATE_DT_TS"].(float64))
+	} else {
+		_, err = stmt.Exec(var_imp["GLB_OE_ID"].(float64),
+			var_imp["CLM_BUS_ID"].(string),
+			var_imp["MODEL"].(string),
+			var_imp["MODEL_DESC"].(string),
+			var_imp["VAR"].(string),
+			var_imp["VALUE"].(string),
+			var_imp["WEIGHT"].(string),
+			nil,
+			nil,
+			var_imp["CREATE_DT_TS"].(float64))
+	}
+	check(err)
+	return err
+}
+
+func _ExecuteInsert(stmt *sql.Stmt, score *protoclaim.ProtoListScore_ProtoScore) {
 	_, err := stmt.Exec(score.GetGLB_OE_ID(), score.GetCLM_BUS_ID(), score.GetSCORE(),
 		score.GetMODEL(), score.GetCREATE_DT(), score.GetCREATE_DT_TS())
 	check(err)
