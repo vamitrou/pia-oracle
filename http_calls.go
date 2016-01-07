@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"container/list"
 	"fmt"
 	"github.com/vamitrou/pia-oracle/pialog"
 	"io/ioutil"
