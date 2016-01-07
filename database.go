@@ -34,7 +34,6 @@ func GetData() {
 	SelectDBData(db, conf.Database.Query)
 }
 
-//func PushData(scores *protoclaim.ProtoListScore) {
 func PushScores(scores []interface{}) {
 	SetLocale.SetLocale(SetLocale.LC_ALL, "de_DE")
 	dsn := getDSN()
@@ -126,9 +125,6 @@ func SelectDBData(db *sql.DB, query string) {
 			}
 		}
 
-		//j, _ := json.Marshal(m)
-		//fmt.Println(string(j))
-		//ioutil.WriteFile("sample.json", j, 0644)
 		claims = append(claims, claim)
 
 		if len(claims) == 3000 {
@@ -155,30 +151,7 @@ func SelectDBData(db *sql.DB, query string) {
 	err = codec.Encode(buf, claims_avro)
 	check(err)
 
-	//ioutil.WriteFile("avro_data/results.last", buf.Bytes(), 0644)
-
-	/*	actual := buf.Bytes()
-		dec, err := codec.Decode(bytes.NewReader(actual))
-		check(err)
-		fmt.Println(dec) */
-
 	go Post(conf.Rest.PredictionEndpoint, buf.Bytes(), conf.Rest.AppHeader)
 
 	pialog.Info("Total input records:", c)
-	/*score_proto := &protoclaim.ProtoListScore{}
-	for i := 0; i < 10; i++ {
-		sc := &protoclaim.ProtoListScore_ProtoScore{
-			GLB_OE_ID:    proto.Int64(int64(i)),
-			CLM_BUS_ID:   proto.String("bus_id"),
-			SCORE:        proto.Float64(34.232),
-			MODEL:        proto.String("model"),
-			CREATE_DT:    proto.Int64(1447671925),
-			CREATE_DT_TS: proto.Int64(1447671925),
-		}
-		score_proto.Scores = append(score_proto.Scores, sc)
-	}
-	proto_bytes, err = proto.Marshal(score_proto)
-	check(err)
-	go Post(conf.Rest.PredictionEndpoint, proto_bytes)*/
-
 }

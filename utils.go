@@ -105,7 +105,6 @@ func GetAvroFields(record *goavro.Record, object string) []string {
 	ret_fields := make([]string, len(fields))
 	for _, field := range fields {
 		f := field.(map[string]interface{})["name"].(string)
-		//fmt.Println(f)
 		ret_fields = append(ret_fields, f)
 	}
 	return ret_fields

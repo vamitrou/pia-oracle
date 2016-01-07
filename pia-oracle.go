@@ -1,14 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	//"github.com/golang/protobuf/proto"
 	"github.com/vamitrou/pia-oracle/config"
 	"github.com/vamitrou/pia-oracle/pialog"
-	//"github.com/vamitrou/pia-oracle/protobuf"
-	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"time"
 )
@@ -34,9 +32,6 @@ func callback(w http.ResponseWriter, r *http.Request) {
 
 	body, err := ioutil.ReadAll(r.Body)
 	check(err)
-	//fmt.Println(string(body))
-	//fmt.Println(len(body))
-
 	go exportData(body)
 }
 
@@ -47,10 +42,6 @@ func predict(w http.ResponseWriter, r *http.Request) {
 func exportData(data []byte) {
 	pialog.Info("Callback received with payload size:", len(data), "-> Exporting data to Oracle DB.")
 	timeTrack(time.Now(), "Data export")
-	//protoscore := &protoclaim.ProtoListScore{}
-	//err := proto.Unmarshal(data, protoscore)
-	//check(err)
-	//PushData(protoscore)
 
 	var j map[string]interface{}
 	err := json.Unmarshal(data, &j)
@@ -67,7 +58,6 @@ func exportData(data []byte) {
 	} else {
 		pialog.Error("Not valid var_imps array")
 	}
-	//fmt.Println(protoscore)
 }
 
 func main() {

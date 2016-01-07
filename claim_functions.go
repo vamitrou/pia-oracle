@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	//"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/vamitrou/pia-oracle/protobuf"
 )
@@ -25,7 +24,6 @@ func ExecuteScoreInsert(stmt *sql.Stmt, score map[string]interface{}) error {
 }
 
 func ExecuteImpInsert(stmt *sql.Stmt, var_imp map[string]interface{}) error {
-	//fmt.Println(var_imp)
 	var err error
 	if _, ok := var_imp["pred"].(float64); ok {
 		_, err = stmt.Exec(var_imp["GLB_OE_ID"].(float64),
