@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
+	"github.com/vamitrou/pia-oracle/pialog"
 	"io/ioutil"
 	"net/http"
 )
@@ -32,11 +33,10 @@ func Post(url string, data []byte, appHeader string) {
 	}
 
 	defer resp.Body.Close()
-	fmt.Println("response status:", resp.Status)
-	fmt.Println("response headers:", resp.Header)
 	body, err := ioutil.ReadAll(resp.Body)
 	if check_with_abort(err, false) {
+		pialog.Error(err)
 		return
 	}
-	fmt.Println("response body:", string(body))
+	pialog.Info("Server replied:", string(body), resp.Status)
 }

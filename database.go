@@ -3,13 +3,10 @@ package main
 import (
 	"bytes"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"github.com/famz/SetLocale"
 	"github.com/linkedin/goavro"
-	//"github.com/vamitrou/pia-oracle/protobuf"
-	"io/ioutil"
-	//"io/ioutil"
+	"github.com/vamitrou/pia-oracle/pialog"
 	"time"
 
 	_ "github.com/vamitrou/go-oci8"
@@ -29,8 +26,11 @@ func GetData() {
 	dsn := getDSN()
 	db, err := sql.Open("oci8", dsn)
 	check(err)
-
 	defer db.Close()
+	if err != nil {
+		pialog.Error(err)
+		return
+	}
 	SelectDBData(db, conf.Database.Query)
 }
 
@@ -56,11 +56,11 @@ func PushScores(scores []interface{}) {
 				fails_count += 1
 			}
 		} else {
-			fmt.Println("not valid score")
+			pialog.Error("Not a valid score:\n", score)
 		}
 	}
 	tx.Commit()
-	fmt.Println("Score Failure count:", fails_count)
+	pialog.Info("Score failures count:", fails_count)
 }
 
 func PushVarIMP(var_imps []interface{}) {
@@ -81,15 +81,15 @@ func PushVarIMP(var_imps []interface{}) {
 				fails_count += 1
 			}
 		} else {
-			fmt.Println("not valid var_imp")
+			pialog.Error("Not a valid var_imp:\n", var_imp)
 		}
 	}
 	tx.Commit()
-	fmt.Println("IMP Failure count:", fails_count)
+	pialog.Info("IMP failures count:", fails_count)
 }
 
 func SelectDBData(db *sql.DB, query string) {
-	defer timeTrack(time.Now(), "get oracle data")
+	defer timeTrack(time.Now(), "SelectDBData")
 
 	rows, err := db.Query(query)
 	check(err)
@@ -126,12 +126,12 @@ func SelectDBData(db *sql.DB, query string) {
 			}
 		}
 
-		j, _ := json.Marshal(m)
+		//j, _ := json.Marshal(m)
 		//fmt.Println(string(j))
-		ioutil.WriteFile("sample.json", j, 0644)
+		//ioutil.WriteFile("sample.json", j, 0644)
 		claims = append(claims, claim)
 
-		if c%3000 == 0 {
+		if len(claims) == 3000 {
 
 			claims_avro, err := goavro.NewRecord(outerSchema)
 			check(err)
@@ -144,7 +144,7 @@ func SelectDBData(db *sql.DB, query string) {
 	}
 
 	if rows.Err() != nil {
-		fmt.Println(rows.Err())
+		pialog.Error(rows.Err())
 	}
 
 	claims_avro, err := goavro.NewRecord(outerSchema)
@@ -163,7 +163,8 @@ func SelectDBData(db *sql.DB, query string) {
 		fmt.Println(dec) */
 
 	go Post(conf.Rest.PredictionEndpoint, buf.Bytes(), conf.Rest.AppHeader)
-	fmt.Println(fmt.Sprintf("total count: %d", c))
+
+	pialog.Info("Total input records:", c)
 	/*score_proto := &protoclaim.ProtoListScore{}
 	for i := 0; i < 10; i++ {
 		sc := &protoclaim.ProtoListScore_ProtoScore{

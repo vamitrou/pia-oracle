@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/linkedin/goavro"
+	"github.com/vamitrou/pia-oracle/pialog"
 	"io/ioutil"
 	"reflect"
 	"time"
@@ -29,7 +30,7 @@ func check_with_abort(e error, abort bool) bool {
 
 func timeTrack(start time.Time, name string) {
 	elapsed := time.Since(start)
-	fmt.Printf("%s took %s\n", name, elapsed)
+	pialog.Info(name, "duration:", elapsed)
 }
 
 func PrepareStatement(tx *sql.Tx, q string) *sql.Stmt {
@@ -104,7 +105,7 @@ func GetAvroFields(record *goavro.Record, object string) []string {
 	ret_fields := make([]string, len(fields))
 	for _, field := range fields {
 		f := field.(map[string]interface{})["name"].(string)
-		fmt.Println(f)
+		//fmt.Println(f)
 		ret_fields = append(ret_fields, f)
 	}
 	return ret_fields

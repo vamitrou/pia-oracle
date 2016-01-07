@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	//"github.com/golang/protobuf/proto"
 	"github.com/vamitrou/pia-oracle/config"
+	"github.com/vamitrou/pia-oracle/pialog"
 	//"github.com/vamitrou/pia-oracle/protobuf"
 	"encoding/json"
 	"io"
@@ -16,12 +17,12 @@ var conf *config.PiaConf = nil
 
 func trigger(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		io.WriteString(w, "Method not allowed.")
+		io.WriteString(w, "Method not allowed.\n")
 		return
 	}
-	io.WriteString(w, "Triggered..")
-	fmt.Println(time.Now())
-	go importData()
+	io.WriteString(w, "OK")
+	pialog.Info("New trigger -", r.Host)
+	go GetData()
 }
 
 func callback(w http.ResponseWriter, r *http.Request) {
@@ -34,23 +35,18 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	check(err)
 	//fmt.Println(string(body))
-	fmt.Println(len(body))
+	//fmt.Println(len(body))
 
 	go exportData(body)
-	fmt.Println("-> callback")
 }
 
 func predict(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "dummy predict\n")
 }
 
-func importData() {
-	fmt.Printf("importing data\n")
-	GetData()
-}
-
 func exportData(data []byte) {
-	fmt.Printf("exporting data\n")
+	pialog.Info("Callback received with payload size:", len(data), "-> Exporting data to Oracle DB.")
+	timeTrack(time.Now(), "Data export")
 	//protoscore := &protoclaim.ProtoListScore{}
 	//err := proto.Unmarshal(data, protoscore)
 	//check(err)
@@ -59,25 +55,29 @@ func exportData(data []byte) {
 	var j map[string]interface{}
 	err := json.Unmarshal(data, &j)
 	check(err)
+
 	if scores, ok := j["Score"].([]interface{}); ok {
 		PushScores(scores)
 	} else {
-		fmt.Println("Not valid scores array")
+		pialog.Error("Not valid scores array")
 	}
+
 	if var_imps, ok := j["var_imp"].([]interface{}); ok {
 		PushVarIMP(var_imps)
 	} else {
-		fmt.Println("Not valid var_imps array")
+		pialog.Error("Not valid var_imps array")
 	}
 	//fmt.Println(protoscore)
-	fmt.Println("done")
-	fmt.Println(time.Now())
 }
 
 func main() {
-	fmt.Println("Server started")
+	version := 0.1
 
 	conf = config.GetConfig()
+
+	pialog.InitializeLogging()
+	pialog.Info("Starting pia-oracle version:", version)
+	pialog.Info("Server started:", fmt.Sprintf("%s:%d", conf.Local.Listen, conf.Local.Port))
 
 	http.HandleFunc("/trigger", trigger)
 	http.HandleFunc("/callback", callback)
