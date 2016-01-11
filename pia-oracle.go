@@ -17,7 +17,7 @@ import (
 var conf *config.PiaConf = nil
 
 func trigger(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
+	if r.Method != "POST" {
 		io.WriteString(w, "Method not allowed.\n")
 		return
 	}
