@@ -11,7 +11,8 @@ import (
 func Post(url string, data []byte, appHeader string) {
 	url = fmt.Sprintf("%s?callback=http://%s:%d/callback", url, conf.Local.Hostname, conf.Local.Port)
 	req, err := http.NewRequest("POST", url, bytes.NewReader(data))
-	if check_with_abort(err, false) {
+	if err != nil {
+		pialog.Error(err)
 		return
 	}
 	req.Header.Set("Content-Type", "avro/binary")
@@ -19,13 +20,14 @@ func Post(url string, data []byte, appHeader string) {
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if check_with_abort(err, false) {
+	if err != nil {
+		pialog.Error(err)
 		return
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	if check_with_abort(err, false) {
+	if err != nil {
 		pialog.Error(err)
 		return
 	}

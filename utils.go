@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/linkedin/goavro"
+	"github.com/vamitrou/pia-oracle/config"
 	"github.com/vamitrou/pia-oracle/pialog"
 	"io/ioutil"
 	"reflect"
@@ -83,11 +84,11 @@ func AssertTime(value interface{}) int64 {
 }
 
 func LoadAvroSchema(outerFile string, innerFile string) (goavro.RecordSetter, goavro.RecordSetter, goavro.Codec) {
-	dat, err := ioutil.ReadFile(innerFile)
+	dat, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", config.Path, innerFile))
 	check(err)
 	innerSchemaStr := string(dat)
 
-	dat2, err := ioutil.ReadFile(outerFile)
+	dat2, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", config.Path, outerFile))
 	check(err)
 	outerSchemaStr := fmt.Sprintf(string(dat2), innerSchemaStr)
 

@@ -105,7 +105,7 @@ func SelectDBData(db *sql.DB, query string) {
 
 	c := 0
 	var claims []interface{}
-	outerSchema, innerSchema, codec := LoadAvroSchema("conf/claims.json", "conf/claim.json")
+	outerSchema, innerSchema, codec := LoadAvroSchema(conf.Avro.OuterSchema, conf.Avro.InnerSchema)
 
 	for rows.Next() {
 		c += 1

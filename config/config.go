@@ -1,13 +1,17 @@
 package config
 
 import (
+	"errors"
 	"github.com/BurntSushi/toml"
 )
 
 var pia *PiaConf = nil
 
+var Path string = ""
+
 type PiaConf struct {
 	Local    LocalConf    `toml:"local"`
+	Avro     AvroConf     `toml:"avro"`
 	Database DatabaseConf `toml:"database"`
 	Rest     RestConf     `toml:"http"`
 }
@@ -16,6 +20,11 @@ type LocalConf struct {
 	Listen   string
 	Port     int32
 	Hostname string
+}
+
+type AvroConf struct {
+	OuterSchema string `toml:"outer_schema"`
+	InnerSchema string `toml:"inner_schema"`
 }
 
 type DatabaseConf struct {
@@ -38,16 +47,18 @@ type RestConf struct {
 	AppHeader          string `toml:"application_header"`
 }
 
-func (c *PiaConf) Load(path string) {
+func (c *PiaConf) Load(path string) error {
 	if _, err := toml.DecodeFile(path, c); err != nil {
-		panic(err)
+		return errors.New("Could not open config file")
 	}
+	return nil
 }
 
-func GetConfig() *PiaConf {
+func GetConfig(confpath string) (*PiaConf, error) {
+	var err error
 	if pia == nil {
 		pia = new(PiaConf)
-		pia.Load("conf/pia-oracle.toml")
+		err = pia.Load(confpath)
 	}
-	return pia
+	return pia, err
 }

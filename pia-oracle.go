@@ -2,12 +2,15 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/vamitrou/pia-oracle/config"
 	"github.com/vamitrou/pia-oracle/pialog"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -63,14 +66,32 @@ func exportData(data []byte) {
 func main() {
 	version := 0.1
 
-	conf = config.GetConfig()
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	confpath := flag.String("config-dir", fmt.Sprintf("%s/conf", dir), "Config file path")
+	flag.Parse()
+
+	config.Path = *confpath
 
 	pialog.InitializeLogging()
 	pialog.Info("Starting pia-oracle version:", version)
+	pialog.Info("Loading config from:", *confpath)
+
+	var err error
+	conf, err = config.GetConfig(fmt.Sprintf("%s/pia-oracle.toml", *confpath))
+	if err != nil {
+		pialog.Error(err)
+		pialog.Info("Exiting")
+		return
+	}
+
 	pialog.Info("Server started:", fmt.Sprintf("%s:%d", conf.Local.Listen, conf.Local.Port))
 
 	http.HandleFunc("/trigger", trigger)
 	http.HandleFunc("/callback", callback)
 	http.HandleFunc("/predict", predict)
-	http.ListenAndServe(fmt.Sprintf("%s:%d", conf.Local.Listen, conf.Local.Port), nil)
+	err = http.ListenAndServe(fmt.Sprintf("%s:%d", conf.Local.Listen, conf.Local.Port), nil)
+	if err != nil {
+		pialog.Error(err)
+	}
+	pialog.Info("Exiting")
 }
