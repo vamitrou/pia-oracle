@@ -43,8 +43,8 @@ func predict(w http.ResponseWriter, r *http.Request) {
 }
 
 func exportData(data []byte) {
-	pialog.Info("Callback received with payload size:", len(data), "-> Exporting data to Oracle DB.")
-	timeTrack(time.Now(), "Data export")
+	pialog.Info("Callback received with payload size:", len(data), "-> Will export data to Oracle DB.")
+	defer timeTrack(time.Now(), "Data export")
 
 	var j map[string]interface{}
 	err := json.Unmarshal(data, &j)
