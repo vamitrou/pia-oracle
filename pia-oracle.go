@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+var version string = "0.1.0"
+
 var conf *config.PiaConf = nil
 
 func trigger(w http.ResponseWriter, r *http.Request) {
@@ -22,7 +24,13 @@ func trigger(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	io.WriteString(w, "OK")
-	pialog.Info("New trigger -", r.Host)
+
+	if len(r.Header["X-Forwarded-For"]) > 0 {
+		pialog.Info("New trigger -", r.Header["X-Forwarded-For"][0])
+	} else {
+		pialog.Info("New trigger -", r.Host)
+	}
+
 	go GetData()
 }
 
@@ -64,11 +72,17 @@ func exportData(data []byte) {
 }
 
 func main() {
-	version := 0.1
-
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+
 	confpath := flag.String("config-dir", fmt.Sprintf("%s/conf", dir), "Config file path")
+	var v bool
+	flag.BoolVar(&v, "v", false, "Asks for version")
 	flag.Parse()
+
+	if v {
+		fmt.Println("Pia-oracle version:", version)
+		return
+	}
 
 	config.Path = *confpath
 
